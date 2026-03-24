@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class WorkflowBase(BaseModel):
@@ -32,7 +32,7 @@ class WorkflowBase(BaseModel):
 class WorkflowCreate(WorkflowBase):
     """Payload for creating a new workflow."""
 
-    experiment_id: uuid.UUID
+    experiment_id: uuid.UUID = Field(validation_alias=AliasChoices("experiment_id", "experimentId"))
     name: str
 
 

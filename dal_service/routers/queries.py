@@ -1,11 +1,11 @@
-"""Phase 4 query endpoints (legacy-style POST queries)."""
+"""Legacy query endpoints compatible with the Engine client."""
 
 from __future__ import annotations
 
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,49 +21,46 @@ from dal_service.schemas.metric import MetricRead
 router = APIRouter(tags=["queries"])
 
 
-def _ensure_allowed_keys(filters: dict[str, Any], allowed: set[str]) -> None:
-    unknown = sorted(set(filters.keys()) - allowed)
-    if unknown:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported filter keys: {', '.join(unknown)}",
-        )
-
-
 @router.post("/experiments-query")
 async def experiments_query(
     filters: dict[str, Any] = Body(default_factory=dict),
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_access_token),
-) -> dict:
-    """Legacy-style experiments query. Empty body returns all."""
-    allowed = {
-        "id",
-        "name",
-        "intent",
-        "status",
-        "model",
-        "comment",
-    }
-    _ensure_allowed_keys(filters, allowed)
+) -> list[ExperimentRead]:
+    """Legacy experiments query.
+
+    Engine expectations:
+    - Request body is a plain dict (may include nested dicts like creator/metadata).
+    - Unknown keys are ignored.
+    - Response is a bare JSON array (no wrapper).
+    """
 
     stmt = select(Experiment)
-    if "id" in filters:
-        stmt = stmt.where(Experiment.id == UUID(str(filters["id"])))
-    if "name" in filters:
-        stmt = stmt.where(Experiment.name == filters["name"])
-    if "intent" in filters:
-        stmt = stmt.where(Experiment.intent == filters["intent"])
-    if "status" in filters:
-        stmt = stmt.where(Experiment.status == filters["status"])
-    if "model" in filters:
-        stmt = stmt.where(Experiment.model == filters["model"])
-    if "comment" in filters:
-        stmt = stmt.where(Experiment.comment == filters["comment"])
+
+    for key, value in (filters or {}).items():
+        if key == "id":
+            stmt = stmt.where(Experiment.id == UUID(str(value)))
+        elif key == "name":
+            stmt = stmt.where(Experiment.name == value)
+        elif key == "intent":
+            stmt = stmt.where(Experiment.intent == value)
+        elif key == "status":
+            stmt = stmt.where(Experiment.status == value)
+        elif key == "model":
+            stmt = stmt.where(Experiment.model == value)
+        elif key == "comment":
+            stmt = stmt.where(Experiment.comment == value)
+        elif key == "creator" and isinstance(value, dict):
+            stmt = stmt.where(Experiment.creator.contains(value))
+        elif key == "metadata" and isinstance(value, dict):
+            stmt = stmt.where(Experiment.experiment_metadata.contains(value))
+        else:
+            # Unknown keys are ignored for legacy compatibility.
+            continue
 
     result = await db.execute(stmt)
     experiments = result.scalars().all()
-    return {"experiments": [ExperimentRead.model_validate(e) for e in experiments]}
+    return [ExperimentRead.model_validate(e) for e in experiments]
 
 
 @router.post("/workflows-query")
@@ -71,32 +68,30 @@ async def workflows_query(
     filters: dict[str, Any] = Body(default_factory=dict),
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_access_token),
-) -> dict:
-    """Legacy-style workflows query. Empty body returns all."""
-    allowed = {
-        "id",
-        "experiment_id",
-        "name",
-        "status",
-        "comment",
-    }
-    _ensure_allowed_keys(filters, allowed)
+) -> list[WorkflowRead]:
+    """Legacy workflows query (bare list response). Unknown keys ignored."""
 
     stmt = select(Workflow)
-    if "id" in filters:
-        stmt = stmt.where(Workflow.id == UUID(str(filters["id"])))
-    if "experiment_id" in filters:
-        stmt = stmt.where(Workflow.experiment_id == UUID(str(filters["experiment_id"])))
-    if "name" in filters:
-        stmt = stmt.where(Workflow.name == filters["name"])
-    if "status" in filters:
-        stmt = stmt.where(Workflow.status == filters["status"])
-    if "comment" in filters:
-        stmt = stmt.where(Workflow.comment == filters["comment"])
+
+    for key, value in (filters or {}).items():
+        if key == "id":
+            stmt = stmt.where(Workflow.id == UUID(str(value)))
+        elif key in ("experiment_id", "experimentId"):
+            stmt = stmt.where(Workflow.experiment_id == UUID(str(value)))
+        elif key == "name":
+            stmt = stmt.where(Workflow.name == value)
+        elif key == "status":
+            stmt = stmt.where(Workflow.status == value)
+        elif key == "comment":
+            stmt = stmt.where(Workflow.comment == value)
+        elif key == "metadata" and isinstance(value, dict):
+            stmt = stmt.where(Workflow.workflow_metadata.contains(value))
+        else:
+            continue
 
     result = await db.execute(stmt)
     workflows = result.scalars().all()
-    return {"workflows": [WorkflowRead.model_validate(w) for w in workflows]}
+    return [WorkflowRead.model_validate(w) for w in workflows]
 
 
 @router.post("/metrics-query")
@@ -104,42 +99,36 @@ async def metrics_query(
     filters: dict[str, Any] = Body(default_factory=dict),
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_access_token),
-) -> dict:
-    """Legacy-style metrics query. Empty body returns all."""
-    allowed = {
-        "id",
-        "experiment_id",
-        "parent_type",
-        "parent_id",
-        "name",
-        "kind",
-        "type",
-        "semantic_type",
-        "produced_by_task",
-    }
-    _ensure_allowed_keys(filters, allowed)
+) -> list[MetricRead]:
+    """Legacy metrics query (bare list response). Unknown keys ignored."""
 
     stmt = select(Metric)
-    if "id" in filters:
-        stmt = stmt.where(Metric.id == UUID(str(filters["id"])))
-    if "experiment_id" in filters:
-        stmt = stmt.where(Metric.experiment_id == UUID(str(filters["experiment_id"])))
-    if "parent_type" in filters:
-        stmt = stmt.where(Metric.parent_type == filters["parent_type"])
-    if "parent_id" in filters:
-        stmt = stmt.where(Metric.parent_id == UUID(str(filters["parent_id"])))
-    if "name" in filters:
-        stmt = stmt.where(Metric.name == filters["name"])
-    if "kind" in filters:
-        stmt = stmt.where(Metric.kind == filters["kind"])
-    if "type" in filters:
-        stmt = stmt.where(Metric.type == filters["type"])
-    if "semantic_type" in filters:
-        stmt = stmt.where(Metric.semantic_type == filters["semantic_type"])
-    if "produced_by_task" in filters:
-        stmt = stmt.where(Metric.produced_by_task == filters["produced_by_task"])
+
+    for key, value in (filters or {}).items():
+        if key == "id":
+            stmt = stmt.where(Metric.id == UUID(str(value)))
+        elif key in ("experiment_id", "experimentId"):
+            stmt = stmt.where(Metric.experiment_id == UUID(str(value)))
+        elif key == "parent_type":
+            stmt = stmt.where(Metric.parent_type == value)
+        elif key == "parent_id":
+            stmt = stmt.where(Metric.parent_id == UUID(str(value)))
+        elif key == "name":
+            stmt = stmt.where(Metric.name == value)
+        elif key == "kind":
+            stmt = stmt.where(Metric.kind == value)
+        elif key == "type":
+            stmt = stmt.where(Metric.type == value)
+        elif key == "semantic_type":
+            stmt = stmt.where(Metric.semantic_type == value)
+        elif key in ("produced_by_task", "producedByTask"):
+            stmt = stmt.where(Metric.produced_by_task == value)
+        elif key == "metadata" and isinstance(value, dict):
+            stmt = stmt.where(Metric.metric_metadata.contains(value))
+        else:
+            continue
 
     result = await db.execute(stmt)
     metrics = result.scalars().all()
-    return {"metrics": [MetricRead.model_validate(m) for m in metrics]}
+    return [MetricRead.model_validate(m) for m in metrics]
 

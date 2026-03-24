@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class MetricBase(BaseModel):
@@ -20,7 +20,10 @@ class MetricBase(BaseModel):
     type: str | None = None
     semantic_type: str | None = None
     value: str | None = None
-    produced_by_task: str | None = None
+    produced_by_task: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("produced_by_task", "producedByTask"),
+    )
     date: datetime | None = None
     records: list[dict[str, Any]] | None = None
     metadata: dict[str, Any] | None = Field(
@@ -32,7 +35,7 @@ class MetricBase(BaseModel):
 class MetricCreate(MetricBase):
     """Payload for creating a new metric."""
 
-    experiment_id: uuid.UUID
+    experiment_id: uuid.UUID | None = None
     parent_type: Literal["experiment", "workflow"]
     parent_id: uuid.UUID
     name: str

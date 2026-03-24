@@ -20,6 +20,19 @@ from dal_service.schemas.experiment import (
 from dal_service.schemas.metric import MetricRead
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
+# Separate router (no /experiments prefix) for Engine legacy endpoints.
+executed_router = APIRouter(tags=["experiments"])
+
+
+@executed_router.get("/executed-experiments")
+async def get_executed_experiments(
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_access_token),
+) -> dict:
+    """Engine-compatible endpoint returning { executed_experiments: [...] }."""
+    result = await db.execute(select(Experiment).order_by(Experiment.created_at.desc()))
+    experiments = result.scalars().all()
+    return {"executed_experiments": [ExperimentRead.model_validate(e) for e in experiments]}
 
 
 @router.put("", status_code=201)
