@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal_service.db.session import get_db
 from dal_service.deps import require_access_token
+from dal_service.utils.orm_columns import orm_columns_dict
 from dal_service.models.metrics import Metric, MetricRecord
 from dal_service.models.workflow import Workflow
 from dal_service.schemas.metric import (
@@ -53,7 +54,7 @@ async def create_metric(
     # Ensure ORM constructor always receives a non-null `experiment_id`.
     attrs["experiment_id"] = resolved_experiment_id
 
-    raw_metadata = attrs.pop("metadata", None) or {}
+    raw_metadata = attrs.pop("metric_metadata", None) or {}
     attrs["metric_metadata"] = raw_metadata
     metric = Metric(**attrs)
     db.add(metric)
@@ -73,7 +74,7 @@ async def get_metric(
     metric = result.scalars().one_or_none()
     if metric is None:
         raise HTTPException(status_code=404, detail="Metric not found")
-    return {"metric": MetricRead.model_validate(metric)}
+    return {"metric": MetricRead.model_validate(orm_columns_dict(metric))}
 
 
 @router.post("/{metric_id}")
@@ -90,13 +91,16 @@ async def update_metric(
         raise HTTPException(status_code=404, detail="Metric not found")
     attrs = body.model_dump(exclude_unset=True)
     for key, value in attrs.items():
-        if key == "metadata":
+        if key == "metric_metadata":
             setattr(metric, "metric_metadata", value)
         else:
             setattr(metric, key, value)
     await db.flush()
     await db.refresh(metric)
-    return {"message": "Metric updated", "metric": MetricRead.model_validate(metric)}
+    return {
+        "message": "Metric updated",
+        "metric": MetricRead.model_validate(orm_columns_dict(metric)),
+    }
 
 
 @router.get("/{metric_id}/records")

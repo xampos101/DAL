@@ -26,9 +26,10 @@ class MetricBase(BaseModel):
     )
     date: datetime | None = None
     records: list[dict[str, Any]] | None = None
-    metadata: dict[str, Any] | None = Field(
+    metric_metadata: dict[str, Any] | None = Field(
         default=None,
-        validation_alias="metric_metadata",
+        validation_alias=AliasChoices("metadata", "metric_metadata"),
+        serialization_alias="metadata",
     )
 
 

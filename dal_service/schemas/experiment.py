@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ExperimentBase(BaseModel):
@@ -19,9 +19,11 @@ class ExperimentBase(BaseModel):
     status: str | None = None
     model: str | None = None
     comment: str | None = None
-    metadata: dict[str, Any] | None = Field(
+    # Python name must not be `metadata` (clashes with SQLAlchemy DeclarativeBase.metadata).
+    experiment_metadata: dict[str, Any] | None = Field(
         default=None,
-        validation_alias="experiment_metadata",
+        validation_alias=AliasChoices("metadata", "experiment_metadata"),
+        serialization_alias="metadata",
     )
     creator: dict[str, Any] | None = None
 

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal_service.db.session import get_db
 from dal_service.deps import require_access_token
+from dal_service.utils.orm_columns import orm_columns_dict
 from dal_service.models.experiment import Experiment
 from dal_service.models.workflow import Workflow
 from dal_service.models.metrics import Metric
@@ -60,7 +61,7 @@ async def experiments_query(
 
     result = await db.execute(stmt)
     experiments = result.scalars().all()
-    return [ExperimentRead.model_validate(e) for e in experiments]
+    return [ExperimentRead.model_validate(orm_columns_dict(e)) for e in experiments]
 
 
 @router.post("/workflows-query")
@@ -91,7 +92,7 @@ async def workflows_query(
 
     result = await db.execute(stmt)
     workflows = result.scalars().all()
-    return [WorkflowRead.model_validate(w) for w in workflows]
+    return [WorkflowRead.model_validate(orm_columns_dict(w)) for w in workflows]
 
 
 @router.post("/metrics-query")
@@ -130,5 +131,5 @@ async def metrics_query(
 
     result = await db.execute(stmt)
     metrics = result.scalars().all()
-    return [MetricRead.model_validate(m) for m in metrics]
+    return [MetricRead.model_validate(orm_columns_dict(m)) for m in metrics]
 

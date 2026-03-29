@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal_service.db.session import get_db
 from dal_service.deps import require_access_token
+from dal_service.utils.orm_columns import orm_columns_dict
 from dal_service.models.experiment import Experiment
 from dal_service.models.workflow import Workflow
 from dal_service.models.metrics import Metric
@@ -39,7 +40,7 @@ async def create_workflow(
     if "output_datasets" not in attrs or attrs["output_datasets"] is None:
         attrs["output_datasets"] = []
     # Map public schema field `metadata` to ORM attribute `workflow_metadata`
-    raw_metadata = attrs.pop("metadata", None)
+    raw_metadata = attrs.pop("workflow_metadata", None)
     if raw_metadata is None:
         raw_metadata = {}
     attrs["workflow_metadata"] = raw_metadata
@@ -68,7 +69,7 @@ async def get_workflow(
     workflow = result.scalars().one_or_none()
     if workflow is None:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    return {"workflow": WorkflowRead.model_validate(workflow)}
+    return {"workflow": WorkflowRead.model_validate(orm_columns_dict(workflow))}
 
 
 @router.post("/{workflow_id}")
@@ -85,13 +86,16 @@ async def update_workflow(
         raise HTTPException(status_code=404, detail="Workflow not found")
     attrs = body.model_dump(exclude_unset=True)
     for key, value in attrs.items():
-        if key == "metadata":
+        if key == "workflow_metadata":
             setattr(workflow, "workflow_metadata", value)
         else:
             setattr(workflow, key, value)
     await db.flush()
     await db.refresh(workflow)
-    return {"message": "Workflow updated", "workflow": WorkflowRead.model_validate(workflow)}
+    return {
+        "message": "Workflow updated",
+        "workflow": WorkflowRead.model_validate(orm_columns_dict(workflow)),
+    }
 
 
 @router.get("/{workflow_id}/metrics")
@@ -105,4 +109,4 @@ async def list_workflow_metrics(
         select(Metric).where(Metric.parent_type == "workflow", Metric.parent_id == workflow_id)
     )
     metrics = result.scalars().all()
-    return {"metrics": [MetricRead.model_validate(m) for m in metrics]}
+    return {"metrics": [MetricRead.model_validate(orm_columns_dict(m)) for m in metrics]}

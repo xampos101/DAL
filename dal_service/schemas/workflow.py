@@ -21,9 +21,10 @@ class WorkflowBase(BaseModel):
     tasks: list[dict[str, Any]] | None = None
     input_datasets: list[dict[str, Any]] | None = None
     output_datasets: list[dict[str, Any]] | None = None
-    metadata: dict[str, Any] | None = Field(
+    workflow_metadata: dict[str, Any] | None = Field(
         default=None,
-        validation_alias="workflow_metadata",
+        validation_alias=AliasChoices("metadata", "workflow_metadata"),
+        serialization_alias="metadata",
     )
     metric_ids: list[uuid.UUID] | None = None
     metrics: list[dict[str, Any]] | None = None
