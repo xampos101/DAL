@@ -1,20 +1,7 @@
-# ExtremeXP DAL — Οδηγός Παρουσίασης
-
-Αυτό το αρχείο περιέχει **όλα όσα χρειάζεσαι** για την παρουσίαση:
-narrative, διαγράμματα Mermaid, κομμάτια κώδικα, και αποτελέσματα tests.
-
+# ExtremeXP DAL
 ---
 
-## 1. Το ένα λεπτό pitch (αυτό λες πρώτο)
 
-> Υλοποιήσαμε το **Data Abstraction Layer (DAL)** του ExtremeXP από μηδέν σε
-> **Python + FastAPI + PostgreSQL**, συμβατό 100% με τον υπάρχοντα Experimentation Engine
-> χωρίς καμία αλλαγή στον κώδικα του client. Καλύπτεται από automated tests με
-> **97% coverage** στα REST endpoints.
-
----
-
-## 2. Αρχιτεκτονικά διαγράμματα
 
 ### Α. Ποιος μιλάει με ποιον
 
@@ -128,7 +115,7 @@ sequenceDiagram
 
 ---
 
-## 3. Πίνακας endpoints (prefix `/api`)
+## Πίνακας endpoints (prefix `/api`)
 
 | HTTP | Endpoint | Επιστρέφει |
 |------|----------|-----------|
@@ -154,9 +141,9 @@ sequenceDiagram
 
 ---
 
-## 4. Κομμάτια κώδικα για την παρουσίαση
+## Κομμάτια κώδικα για την παρουσίαση
 
-### 4.1 Εγγραφή routers — `dal_service/main.py`
+### Εγγραφή routers — `dal_service/main.py`
 
 Ένα αρχείο, 17 γραμμές. Δείχνει την αρχιτεκτονική του API.
 
@@ -178,7 +165,7 @@ app.include_router(queries.router,                   prefix="/api")
 
 ---
 
-### 4.2 Authentication — `dal_service/deps.py`
+### Authentication — `dal_service/deps.py`
 
 Απλό και αποτελεσματικό. Ο Engine στέλνει `access-token` στο header.
 
@@ -196,7 +183,7 @@ async def require_access_token(
 
 ---
 
-### 4.3 Δημιουργία experiment — `dal_service/routers/experiments.py`
+### Δημιουργία experiment — `dal_service/routers/experiments.py`
 
 ```python
 @router.put("", status_code=201)
@@ -218,7 +205,7 @@ async def create_experiment(
 
 ---
 
-### 4.4 Engine-compatible endpoint — `GET /executed-experiments`
+### Engine-compatible endpoint — `GET /executed-experiments`
 
 Ο Engine το περιμένει με αυτό ακριβώς το path και key. Χωρίς αλλαγή στον client.
 
@@ -239,7 +226,7 @@ async def get_executed_experiments(
 
 ---
 
-### 4.5 Αποστολή metric data — `PUT /metrics-data/{metric_id}`
+### Αποστολή metric data — `PUT /metrics-data/{metric_id}`
 
 Ο Engine στέλνει `{"records": [{"value": 0.11}, ...]}`. Το DAL τα αποθηκεύει στον πίνακα `metric_records`.
 
@@ -262,7 +249,7 @@ async def put_metric_data(metric_id: UUID, body: dict = Body(...), db: ..., _ ..
 
 ---
 
-### 4.6 DB session με commit/rollback — `dal_service/db/session.py`
+### DB session με commit/rollback — `dal_service/db/session.py`
 
 ```python
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -280,7 +267,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 ---
 
-### 4.7 Pydantic schema με `metadata` alias — `dal_service/schemas/experiment.py`
+### Pydantic schema με `metadata` alias — `dal_service/schemas/experiment.py`
 
 Πρόβλημα: το `metadata` είναι δεσμευμένο attribute του SQLAlchemy `Base`. Λύση: διαφορετικό Python name + alias.
 
@@ -296,7 +283,7 @@ class ExperimentBase(BaseModel):
 
 ---
 
-### 4.8 `orm_columns_dict` — γιατί το χρειαζόμαστε
+### `orm_columns_dict` — γιατί το χρειαζόμαστε
 
 ```python
 # dal_service/utils/orm_columns.py
@@ -311,7 +298,7 @@ def orm_columns_dict(instance: object) -> dict[str, Any]:
 
 ---
 
-### 4.9 ORM Model με CASCADE — `dal_service/models/metrics.py` (απόσπασμα)
+### ORM Model με CASCADE — `dal_service/models/metrics.py` (απόσπασμα)
 
 ```python
 class Metric(Base):
@@ -331,7 +318,7 @@ class Metric(Base):
 
 ---
 
-## 5. Tests — δομή και αποτελέσματα
+## Tests — δομή και αποτελέσματα
 
 ### Δομή test suite
 
@@ -422,69 +409,36 @@ TOTAL                                 317     10    97%
 35 passed in 8.91s
 ```
 
----
-
-## 6. Πιθανές ερωτήσεις και απαντήσεις
-
-**Γιατί FastAPI και όχι Flask/Django?**
-> Async by default, Pydantic v2 ενσωματωμένο, αυτόματο `/docs` (OpenAPI).
-
-**Γιατί async SQLAlchemy;**
-> Μη blocking I/O — ο server δεν περιμένει idle στη βάση, εξυπηρετεί άλλα requests.
-
-**Πώς εξασφαλίζεται συμβατότητα με τον Engine;**
-> Ίδια paths (`/executed-experiments`, `/metrics-data/{id}`, κλπ), ίδια JSON keys
-> (`experimentId`, `workflow_id`, `executed_experiments`), ίδιος auth header `access-token`.
-
-**Γιατί `orm_columns_dict` και όχι `model_validate(orm_obj)` απευθείας;**
-> Το SQLAlchemy `Base` έχει attribute `.metadata` που είναι `MetaData` object (σχήμα βάσης),
-> όχι το JSON dict μας. Χωρίς φίλτρο το Pydantic το διαβάζει λάθος.
-
-**Γιατί UUID και όχι integer IDs;**
-> Διανεμημένη δημιουργία χωρίς κεντρική ακολουθία — αναγκαίο για microservices.
-
-**Τι δεν υλοποιήθηκε ακόμα;**
-> JWT επικύρωση υπογραφής (τώρα γίνεται string comparison), Alembic migrations,
-> Docker/CI, rate limiting.
-
----
-
-## 7. Δομή project (τι ανοίγεις στον editor)
+## 7. Δομή project
 
 ```
-extremexp-experimentation-engine-main/   ← ρίζα παρουσίασης
+extremexp-experimentation-engine-main/  
 ├── dal_service/
-│   ├── main.py                          ← 4.1 παραπάνω
-│   ├── deps.py                          ← 4.2 auth
+│   ├── main.py                          
+│   ├── deps.py                          
 │   ├── core/config.py
-│   ├── db/session.py                    ← 4.6 get_db
+│   ├── db/session.py                    
 │   ├── models/
 │   │   ├── experiment.py
 │   │   ├── workflow.py
-│   │   └── metrics.py                   ← 4.9 CASCADE
+│   │   └── metrics.py                   
 │   ├── routers/
-│   │   ├── experiments.py               ← 4.3 4.4
+│   │   ├── experiments.py               
 │   │   ├── workflows.py
-│   │   ├── metrics.py                   ← 4.5
+│   │   ├── metrics.py                   
 │   │   ├── queries.py
 │   │   └── health.py
 │   ├── schemas/
-│   │   ├── experiment.py                ← 4.7 alias
+│   │   ├── experiment.py                
 │   │   ├── workflow.py
 │   │   └── metric.py
-│   └── utils/orm_columns.py             ← 4.8
+│   └── utils/orm_columns.py            
 ├── tests/
 │   ├── conftest.py
 │   ├── test_auth.py
 │   ├── test_contracts.py
-│   ├── test_integration.py              ← 5 integration test
+│   ├── test_integration.py              
 │   └── test_router_coverage.py
-└── docs/
-    ├── database_schema.sql
-    ├── DAL_ARCHITECTURE.md
-    └── PRESENTATION_GUIDE.md            ← αυτό το αρχείο
 ```
 
 ---
-
-*Αρχείο: `docs/PRESENTATION_GUIDE.md` — δημιουργήθηκε 2026-03-30*
