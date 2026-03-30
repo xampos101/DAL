@@ -62,47 +62,49 @@ flowchart TB
 
 ```mermaid
 erDiagram
-  EXPERIMENTS ||--o{ WORKFLOWS : "1 → *"
+  EXPERIMENTS ||--o{ WORKFLOWS : "contains"
   EXPERIMENTS ||--o{ METRICS : "scopes"
   WORKFLOWS ||--o{ METRICS : "parent"
-  METRICS ||--o{ METRIC_RECORDS : "has records"
-  METRICS ||--o| METRIC_AGGREGATIONS : "cached agg"
+  METRICS ||--o{ METRIC_RECORDS : "has"
+  METRICS ||--o| METRIC_AGGREGATIONS : "cached"
 
   EXPERIMENTS {
-    UUID id PK
-    TEXT name
-    TEXT status
-    JSONB metadata
-    UUID[] workflow_ids
+    uuid id PK
+    text name
+    jsonb metadata
+    array workflow_ids
   }
+
   WORKFLOWS {
-    UUID id PK
-    UUID experiment_id FK
-    TEXT name
-    TEXT status
-    JSONB parameters
-    JSONB tasks
+    uuid id PK
+    uuid experiment_id FK
+    text name
+    jsonb metadata
   }
+
   METRICS {
-    UUID id PK
-    UUID experiment_id FK
-    TEXT parent_type
-    UUID parent_id
-    TEXT kind
-    JSONB records
+    uuid id PK
+    uuid experiment_id FK
+    text parent_type
+    uuid parent_id
+    jsonb metadata
   }
+
   METRIC_RECORDS {
-    UUID id PK
-    UUID metric_id FK
-    FLOAT value
-    TIMESTAMPTZ timestamp
+    uuid id PK
+    uuid metric_id FK
+    float value
   }
+
   METRIC_AGGREGATIONS {
-    UUID metric_id PK_FK
-    BIGINT count
-    FLOAT sum_min_max_avg_median
+    uuid metric_id PK
+    bigint count
+    float aggregated
   }
+
+
 ```
+
 
 ### Δ. Ακολουθία μιας κλήσης (end-to-end)
 
