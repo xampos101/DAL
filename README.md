@@ -1,209 +1,160 @@
-# NEW DAL Documentation
+# ExtremeXP DAL (Data Abstraction Layer)
 
-This guide documents the NEW DAL implementation only:
+Υπηρεσία **REST** σε **Python 3.12+** με **FastAPI** και **PostgreSQL** (async μέσω **SQLAlchemy 2** και **asyncpg**). Αποθηκεύει μεταδεδομένα πειραμάτων, workflows και metrics, με συμβατότητα προς το **ExtremeXP Experimentation Engine** (header `access-token`, legacy διαδρομές όπως `executed-experiments` και `*-query`).
 
-- FastAPI service
-- PostgreSQL persistence
-- Engine-compatible API behavior
-- Local installation and Docker deployment
+Για **ευρετήριο ελληνικής τεκμηρίωσης** δες [docs/README_EL.md](docs/README_EL.md).
+Για πλήρες τεχνικό πακέτο **NEW DAL only** (architecture, flowcharts, ERD, installation, Docker), δες [docs/NEW_DAL_DOCUMENTATION.md](docs/NEW_DAL_DOCUMENTATION.md).
 
-No OLD/legacy DAL instructions are included in this file.
+---
 
-## Architecture
+## Απαιτήσεις
 
-```mermaid
-flowchart LR
-  ExpEngine[ExpEngineClient]
-  DalApi[NewDalFastAPI]
-  Pg[(PostgreSQL)]
-  ExecWare[ExecutionWare]
-  ProActive[ProActive]
+- Python 3.12 ή νεότερο (δοκιμασμένο με 3.12)
+- PostgreSQL με υποστήριξη **UUID**, **JSONB**, **ARRAY(UUID)** (όπως η παραγωγική βάση DAL)
 
-  ExpEngine -->|"HTTP /api + access-token"| DalApi
-  DalApi -->|"SQLAlchemy Async"| Pg
-  ExpEngine --> ExecWare
-  ExecWare --> ProActive
-```
+---
 
-## Data Lifecycle Flowchart
+## Γρήγορη εκκίνηση
 
-```mermaid
-flowchart TD
-  Start[StartExperimentRun]
-  CreateExperiment["PUT /api/experiments"]
-  CreateWorkflow["PUT /api/workflows"]
-  CreateMetric["PUT /api/metrics"]
-  AddMetricData["PUT /api/metrics-data/{metricId}"]
-  UpdateStates["POST /api/workflows/{id} and /api/experiments/{id}"]
-  ReadResults["GET/POST query endpoints"]
-  EndNode[Finished]
-
-  Start --> CreateExperiment
-  CreateExperiment --> CreateWorkflow
-  CreateWorkflow --> CreateMetric
-  CreateMetric --> AddMetricData
-  AddMetricData --> UpdateStates
-  UpdateStates --> ReadResults
-  ReadResults --> EndNode
-```
-
-## ER Diagram (Core Entities)
-
-```mermaid
-erDiagram
-  EXPERIMENT ||--o{ WORKFLOW : contains
-  WORKFLOW ||--o{ METRIC : emits
-  EXPERIMENT ||--o{ METRIC : scopes
-  METRIC ||--o{ METRIC_RECORD : stores
-
-  EXPERIMENT {
-    uuid id PK
-    string name
-    string status
-    datetime created_at
-    datetime updated_at
-  }
-
-  WORKFLOW {
-    uuid id PK
-    uuid experiment_id FK
-    string name
-    string status
-    datetime created_at
-    datetime updated_at
-  }
-
-  METRIC {
-    uuid id PK
-    uuid experiment_id FK
-    uuid workflow_id FK
-    string metric_type
-    string name
-    datetime created_at
-  }
-
-  METRIC_RECORD {
-    uuid id PK
-    uuid metric_id FK
-    float value
-    datetime timestamp
-  }
-```
-
-## Installation (Local)
-
-### Prerequisites
-
-- Python 3.12+
-- PostgreSQL 15+
-- Git
-- Docker + Docker Compose (recommended for local infra)
-
-### Setup
+### 1. Κλώνος και εικονικό περιβάλλον
 
 ```bash
-git clone https://github.com/xampos101/DAL.git
-cd DAL
+git clone <repository-url>
+cd <φάκελος-του-repo>
 python -m venv .venv
 ```
 
-PowerShell:
+Windows (PowerShell):
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install dependencies:
+Linux / macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+### 2. Εξαρτήσεις
 
 ```bash
 pip install -r requirements-test.txt
 pip install "uvicorn[standard]"
 ```
 
-Create local environment file:
+Το αρχείο `requirements-test.txt` περιλαμβάνει τις βιβλιοθήκες εφαρμογής και τις βιβλιοθήκες δοκιμών. Το **uvicorn** χρειάζεται για εκτέλεση του API server και δεν περιλαμβάνεται στο ίδιο αρχείο.
 
-```env
-DATABASE_URL=postgresql+asyncpg://<DB_USER>:<DB_PASSWORD>@127.0.0.1:5432/<DB_NAME>
-ACCESS_TOKEN=<DAL_ACCESS_TOKEN>
-```
+### 3. Μεταβλητές περιβάλλοντος
 
-Run the API:
+Αντίγραψε το `.env.example` σε `.env` και συμπλήρωσε τιμές (μην ανεβάζεις το `.env` στο Git):
+
+| Μεταβλητή       | Περιγραφή |
+|-----------------|-----------|
+| `DATABASE_URL`  | `postgresql+asyncpg://user:password@host:5432/dbname` |
+| `ACCESS_TOKEN`  | Κοινό μυστικό για header `access-token` (λειτουργία εξαρτάται από `dal_service/deps.py`) |
+
+### 4. Εκτέλεση API
+
+Από τον **ρίζα** του project (εκεί που βρίσκονται οι φάκελοι `dal_service/` και `tests/`):
 
 ```bash
-uvicorn dal_service.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn dal_service.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Verify:
+Αντιμετώπιση προβλημάτων με reload σε Windows: περιόρισε την παρακολούθηση αρχείων ώστε να μην σαρώνει το `.venv`.
 
-```bash
-curl -H "access-token: <DAL_ACCESS_TOKEN>" http://127.0.0.1:8000/api/health
-curl -H "access-token: <DAL_ACCESS_TOKEN>" http://127.0.0.1:8000/api/experiments
-```
+- Διαδραστική τεκμηρίωση: `http://127.0.0.1:8000/docs`
+- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
 
-## Docker Installation / Deployment
+Όλα τα routers του DAL είναι κάτω από prefix **`/api`**.
 
-### `.env.example`
+---
 
-```env
-POSTGRES_DB=<POSTGRES_DB>
-POSTGRES_USER=<POSTGRES_USER>
-POSTGRES_PASSWORD=<POSTGRES_PASSWORD>
-DATABASE_URL=postgresql+asyncpg://<POSTGRES_USER>:<POSTGRES_PASSWORD>@postgres:5432/<POSTGRES_DB>
-ACCESS_TOKEN=<DAL_ACCESS_TOKEN>
-```
+## Docker Compose (NEW DAL + PostgreSQL)
 
-### `docker-compose.yml` (single stack)
-
-```yaml
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  dal:
-    build: .
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      ACCESS_TOKEN: ${ACCESS_TOKEN}
-    depends_on:
-      - postgres
-    ports:
-      - "8000:8000"
-
-volumes:
-  postgres_data:
-```
-
-### Runbook
+1. Αντέγραψε το `.env.example` σε `.env` και βάλε πραγματικές τιμές.
+2. Εκκίνηση stack:
 
 ```bash
 docker compose up -d --build
+```
+
+3. Έλεγχος services:
+
+```bash
 docker compose ps
 docker compose logs -f dal
 ```
 
-Stop:
+4. Γρήγορος έλεγχος API:
+
+```bash
+curl -H "access-token: <DAL_ACCESS_TOKEN>" http://127.0.0.1:8000/api/health
+```
+
+5. Τερματισμός:
 
 ```bash
 docker compose down
 ```
 
-Reset (destructive):
+6. Καθαρό reset βάσης (destructive):
 
 ```bash
 docker compose down -v
 ```
 
-## Security Notes
+---
 
-- Never commit real tokens or database credentials.
-- Keep `.env` local and gitignored.
-- Use placeholders in all shared documentation.
-- Rotate token immediately if exposure is suspected.
+## Δομή αποθετηρίου
+
+| Διαδρομή | Ρόλος |
+|----------|--------|
+| `dal_service/main.py` | Σημείο εισόδου FastAPI, εγγραφή routers |
+| `dal_service/routers/` | HTTP handlers (experiments, workflows, metrics, queries, health) |
+| `dal_service/models/` | SQLAlchemy ORM |
+| `dal_service/schemas/` | Pydantic request/response |
+| `dal_service/db/` | Async engine και `get_db` |
+| `dal_service/deps.py` | Auth dependency |
+| `dal_service/utils/` | Βοηθητικά (π.χ. `orm_columns_dict` για ασφαλές `model_validate` από στήλες ORM) |
+| `tests/` | Pytest suite, `conftest.py` |
+| `docs/` | Αρχιτεκτονική, πρόοδος, τεχνικές εξηγήσεις (πολλά στα ελληνικά) |
+| `pytest.ini` | Ρυθμίσεις pytest και asyncio (session-scoped loops) |
+| `.coveragerc` | `concurrency = greenlet` για ρεαλιστικό coverage με SQLAlchemy async |
+
+---
+
+## Δοκιμές (pytest)
+
+Χρειάζεσαι **τρέχουσα PostgreSQL** και URL asyncpg. Προτείνεται **ξεχωριστή** βάση για tests (π.χ. `dal_test`), επειδή το suite κάνει `TRUNCATE` σε πίνακες DAL πριν από κάθε test.
+
+PowerShell (παράδειγμα με πλήρες path στο project):
+
+```powershell
+cd "C:\Users\<user>\...\extremexp-experimentation-engine-main\extremexp-experimentation-engine-main\extremexp-experimentation-engine-main"
+$env:TEST_DATABASE_URL = "postgresql+asyncpg://postgres:YOUR_PASSWORD@127.0.0.1:5432/dal_test"
+py -3.12 -m pytest tests/ -v --cov=dal_service.routers --cov-report=term-missing --cov-fail-under=80
+```
+
+Σημαντικό: το `cd` πρέπει να δείχνει στον φάκελο που περιέχει `pytest.ini`. Αν τρέξεις pytest από άλλο directory, δεν φορτώνονται οι ρυθμίσεις asyncio και εμφανίζονται λάθη τύπου διαφορετικού event loop.
+
+Λεπτομέρειες: [tests/README.md](tests/README.md).
+
+---
+
+## Αρχιτεκτονική
+
+Διαγράμματα Mermaid και επίπεδα συστήματος: [docs/DAL_ARCHITECTURE.md](docs/DAL_ARCHITECTURE.md).
+
+---
+
+## Άδεια
+
+Δες το αρχείο `LICENSE` στο αποθετήριο (αν υπάρχει).
+
+---
+
+## Συνεισφορά
+
+Pull requests κατά προτίμηση από ξεχωριστό branch. Πριν το push: `pytest` με ενεργό `TEST_DATABASE_URL`, χωρίς να συμπεριλαμβάνονται μυστικά στο commit (`.gitignore` για `.env`, `.venv`, coverage artifacts).
