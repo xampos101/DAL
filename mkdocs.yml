@@ -1,5 +1,5 @@
-site_name: ExpEngine Documentation (preview)
-site_url: https://xampos101.github.io/DAL/
+site_name: ExpEngine Documentation
+site_url: https://extremexp-horizon.github.io/extremexp-experimentation-engine-docs/
 theme:
   name: material
   custom_dir: docs/overrides
