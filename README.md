@@ -5,8 +5,7 @@ It stores experiment, workflow, and metric metadata with compatibility for the
 ExtremeXP Experimentation Engine (`access-token` header and legacy routes such as
 `/executed-experiments` and `*-query`).
 
-For full NEW-DAL technical documentation, see `docs/NEW_DAL_DOCUMENTATION.md`.
-For architecture diagrams and presentation material, see files under `docs/`.
+**Documentation:** browse the MkDocs site locally (`mkdocs serve`) or the published site at [GitHub Pages](https://xampos101.github.io/DAL/). Operational DAL pages live under `docs/dal/` in this repository.
 
 ---
 

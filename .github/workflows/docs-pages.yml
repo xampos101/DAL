@@ -29,7 +29,7 @@ jobs:
       - name: Install docs dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mkdocs mkdocs-material mkdocs-render-swagger-plugin
+          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-render-swagger-plugin
 
       - name: Build docs
         run: mkdocs build
