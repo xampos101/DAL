@@ -1,105 +1,103 @@
 # ExtremeXP DAL (Data Abstraction Layer)
 
-Υπηρεσία **REST** σε **Python 3.12+** με **FastAPI** και **PostgreSQL** (async μέσω **SQLAlchemy 2** και **asyncpg**). Αποθηκεύει μεταδεδομένα πειραμάτων, workflows και metrics, με συμβατότητα προς το **ExtremeXP Experimentation Engine** (header `access-token`, legacy διαδρομές όπως `executed-experiments` και `*-query`).
+REST service in **Python 3.12+** using **FastAPI** and **PostgreSQL** (async with **SQLAlchemy 2** + **asyncpg**).
+It stores experiment, workflow, and metric metadata with compatibility for the
+ExtremeXP Experimentation Engine (`access-token` header and legacy routes such as
+`/executed-experiments` and `*-query`).
 
-Για **ευρετήριο ελληνικής τεκμηρίωσης** δες [docs/README_EL.md](docs/README_EL.md).
-Για πλήρες τεχνικό πακέτο **NEW DAL only** (architecture, flowcharts, ERD, installation, Docker), δες [docs/NEW_DAL_DOCUMENTATION.md](docs/NEW_DAL_DOCUMENTATION.md).
-
----
-
-## Απαιτήσεις
-
-- Python 3.12 ή νεότερο (δοκιμασμένο με 3.12)
-- PostgreSQL με υποστήριξη **UUID**, **JSONB**, **ARRAY(UUID)** (όπως η παραγωγική βάση DAL)
+For full NEW-DAL technical documentation, see `docs/NEW_DAL_DOCUMENTATION.md`.
+For architecture diagrams and presentation material, see files under `docs/`.
 
 ---
 
-## Γρήγορη εκκίνηση
+## Requirements
 
-### 1. Κλώνος και εικονικό περιβάλλον
+- Python 3.12+
+- PostgreSQL (UUID, JSONB, ARRAY support)
+- Docker Desktop + Docker Compose (recommended for local setup)
+
+---
+
+## Quick Start
+
+### 1) Clone and create a virtual environment
 
 ```bash
 git clone <repository-url>
-cd <φάκελος-του-repo>
+cd <repository-folder>
 python -m venv .venv
 ```
 
-Windows (PowerShell):
+PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-Linux / macOS:
+Linux/macOS:
 
 ```bash
 source .venv/bin/activate
 ```
 
-### 2. Εξαρτήσεις
+### 2) Install dependencies
 
 ```bash
 pip install -r requirements-test.txt
 pip install "uvicorn[standard]"
 ```
 
-Το αρχείο `requirements-test.txt` περιλαμβάνει τις βιβλιοθήκες εφαρμογής και τις βιβλιοθήκες δοκιμών. Το **uvicorn** χρειάζεται για εκτέλεση του API server και δεν περιλαμβάνεται στο ίδιο αρχείο.
+### 3) Configure environment
 
-### 3. Μεταβλητές περιβάλλοντος
+Copy `.env.example` to `.env` and set real values:
 
-Αντίγραψε το `.env.example` σε `.env` και συμπλήρωσε τιμές (μην ανεβάζεις το `.env` στο Git):
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://user:password@host:5432/dbname` |
+| `ACCESS_TOKEN` | Shared token expected in `access-token` header |
 
-| Μεταβλητή       | Περιγραφή |
-|-----------------|-----------|
-| `DATABASE_URL`  | `postgresql+asyncpg://user:password@host:5432/dbname` |
-| `ACCESS_TOKEN`  | Κοινό μυστικό για header `access-token` (λειτουργία εξαρτάται από `dal_service/deps.py`) |
-
-### 4. Εκτέλεση API
-
-Από τον **ρίζα** του project (εκεί που βρίσκονται οι φάκελοι `dal_service/` και `tests/`):
+### 4) Run the API
 
 ```bash
 uvicorn dal_service.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Αντιμετώπιση προβλημάτων με reload σε Windows: περιόρισε την παρακολούθηση αρχείων ώστε να μην σαρώνει το `.venv`.
-
-- Διαδραστική τεκμηρίωση: `http://127.0.0.1:8000/docs`
+- Swagger UI: `http://127.0.0.1:8000/docs`
 - OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
 
-Όλα τα routers του DAL είναι κάτω από prefix **`/api`**.
+All DAL routers are mounted under `/api`.
 
 ---
 
 ## Docker Compose (NEW DAL + PostgreSQL)
 
-1. Αντέγραψε το `.env.example` σε `.env` και βάλε πραγματικές τιμές.
-2. Εκκίνηση stack:
+1. Copy `.env.example` to `.env` and fill in real values.
+2. Start:
 
 ```bash
 docker compose up -d --build
 ```
 
-3. Έλεγχος services:
+3. Inspect:
 
 ```bash
 docker compose ps
 docker compose logs -f dal
 ```
 
-4. Γρήγορος έλεγχος API:
+4. Health check:
 
 ```bash
 curl -H "access-token: <DAL_ACCESS_TOKEN>" http://127.0.0.1:8000/api/health
 ```
 
-5. Τερματισμός:
+5. Stop:
 
 ```bash
 docker compose down
 ```
 
-6. Καθαρό reset βάσης (destructive):
+6. Reset database volume (destructive):
 
 ```bash
 docker compose down -v
@@ -107,54 +105,38 @@ docker compose down -v
 
 ---
 
-## Δομή αποθετηρίου
+## Repository Structure
 
-| Διαδρομή | Ρόλος |
-|----------|--------|
-| `dal_service/main.py` | Σημείο εισόδου FastAPI, εγγραφή routers |
-| `dal_service/routers/` | HTTP handlers (experiments, workflows, metrics, queries, health) |
-| `dal_service/models/` | SQLAlchemy ORM |
-| `dal_service/schemas/` | Pydantic request/response |
-| `dal_service/db/` | Async engine και `get_db` |
+| Path | Purpose |
+|---|---|
+| `dal_service/main.py` | FastAPI app entry point |
+| `dal_service/routers/` | HTTP endpoints (experiments, workflows, metrics, queries, health) |
+| `dal_service/models/` | SQLAlchemy models |
+| `dal_service/schemas/` | Pydantic request/response models |
+| `dal_service/db/` | Async engine/session handling |
 | `dal_service/deps.py` | Auth dependency |
-| `dal_service/utils/` | Βοηθητικά (π.χ. `orm_columns_dict` για ασφαλές `model_validate` από στήλες ORM) |
-| `tests/` | Pytest suite, `conftest.py` |
-| `docs/` | Αρχιτεκτονική, πρόοδος, τεχνικές εξηγήσεις (πολλά στα ελληνικά) |
-| `pytest.ini` | Ρυθμίσεις pytest και asyncio (session-scoped loops) |
-| `.coveragerc` | `concurrency = greenlet` για ρεαλιστικό coverage με SQLAlchemy async |
+| `dal_service/utils/` | Utility helpers |
+| `tests/` | Pytest suite |
+| `docs/` | Architecture and supporting documentation |
 
 ---
 
-## Δοκιμές (pytest)
+## Testing
 
-Χρειάζεσαι **τρέχουσα PostgreSQL** και URL asyncpg. Προτείνεται **ξεχωριστή** βάση για tests (π.χ. `dal_test`), επειδή το suite κάνει `TRUNCATE` σε πίνακες DAL πριν από κάθε test.
-
-PowerShell (παράδειγμα με πλήρες path στο project):
+Set `TEST_DATABASE_URL` before running tests:
 
 ```powershell
-cd "C:\Users\<user>\...\extremexp-experimentation-engine-main\extremexp-experimentation-engine-main\extremexp-experimentation-engine-main"
 $env:TEST_DATABASE_URL = "postgresql+asyncpg://postgres:YOUR_PASSWORD@127.0.0.1:5432/dal_test"
 py -3.12 -m pytest tests/ -v --cov=dal_service.routers --cov-report=term-missing --cov-fail-under=80
 ```
 
-Σημαντικό: το `cd` πρέπει να δείχνει στον φάκελο που περιέχει `pytest.ini`. Αν τρέξεις pytest από άλλο directory, δεν φορτώνονται οι ρυθμίσεις asyncio και εμφανίζονται λάθη τύπου διαφορετικού event loop.
-
-Λεπτομέρειες: [tests/README.md](tests/README.md).
-
----
-
-## Αρχιτεκτονική
-
-Διαγράμματα Mermaid και επίπεδα συστήματος: [docs/DAL_ARCHITECTURE.md](docs/DAL_ARCHITECTURE.md).
+Run tests from the repository root (where `pytest.ini` lives).
+More details: `tests/README.md`.
 
 ---
 
-## Άδεια
+## Contributing
 
-Δες το αρχείο `LICENSE` στο αποθετήριο (αν υπάρχει).
-
----
-
-## Συνεισφορά
-
-Pull requests κατά προτίμηση από ξεχωριστό branch. Πριν το push: `pytest` με ενεργό `TEST_DATABASE_URL`, χωρίς να συμπεριλαμβάνονται μυστικά στο commit (`.gitignore` για `.env`, `.venv`, coverage artifacts).
+- Use feature branches for changes.
+- Run tests before pushing.
+- Never commit secrets (`.env`, tokens, DB credentials).
