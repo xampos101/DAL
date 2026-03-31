@@ -65,4 +65,6 @@ nav:
     - Configuration: dal/configuration.md
     - Docker Deployment: dal/docker-deployment.md
     - Troubleshooting: dal/troubleshooting.md
+    - PostgreSQL schema: DAL_POSTGRESQL_SCHEMA.md
+    - Data flow: DAL_DATA_FLOW.md
   - ExpEngine as a Service: expengine_service.md
