@@ -1,0 +1,16 @@
+# DAL Documentation
+
+This section provides complete operational documentation for DAL usage with ExpEngine.
+
+Use the menu pages to navigate:
+
+- [Overview](overview.md)
+- [Installation](installation.md)
+- [Configuration](configuration.md)
+- [Docker Deployment](docker-deployment.md)
+- [Troubleshooting](troubleshooting.md)
+
+## Security note
+
+All examples in this documentation intentionally use placeholders and environment variables.
+Do not paste real credentials or tokens into Markdown files.

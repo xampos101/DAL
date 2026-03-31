@@ -1,0 +1,17 @@
+site_name: DAL Documentation
+site_url: https://xampos101.github.io/DAL/
+theme:
+  name: material
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - DAL:
+    - Home: dal/index.md
+    - Overview: dal/overview.md
+    - Installation: dal/installation.md
+    - Configuration: dal/configuration.md
+    - Docker Deployment: dal/docker-deployment.md
+    - Troubleshooting: dal/troubleshooting.md
