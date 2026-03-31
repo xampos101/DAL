@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class WorkflowBase(BaseModel):
@@ -21,9 +21,10 @@ class WorkflowBase(BaseModel):
     tasks: list[dict[str, Any]] | None = None
     input_datasets: list[dict[str, Any]] | None = None
     output_datasets: list[dict[str, Any]] | None = None
-    metadata: dict[str, Any] | None = Field(
+    workflow_metadata: dict[str, Any] | None = Field(
         default=None,
-        validation_alias="workflow_metadata",
+        validation_alias=AliasChoices("metadata", "workflow_metadata"),
+        serialization_alias="metadata",
     )
     metric_ids: list[uuid.UUID] | None = None
     metrics: list[dict[str, Any]] | None = None
@@ -32,7 +33,7 @@ class WorkflowBase(BaseModel):
 class WorkflowCreate(WorkflowBase):
     """Payload for creating a new workflow."""
 
-    experiment_id: uuid.UUID
+    experiment_id: uuid.UUID = Field(validation_alias=AliasChoices("experiment_id", "experimentId"))
     name: str
 
 

@@ -1,0 +1,5 @@
+[run]
+# SQLAlchemy async runs ORM code in greenlets; default tracing misses those lines.
+concurrency = greenlet
+source = dal_service
+relative_files = true
