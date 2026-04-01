@@ -18,8 +18,6 @@ REST API service in **Python 3.12+** with **FastAPI**, **PostgreSQL**, **SQLAlch
 - [Tests](#tests)
 - [Documentation site (MkDocs)](#documentation-site-mkdocs)
 - [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-
 ---
 
 ## Features
@@ -246,11 +244,3 @@ Pushes to `main` trigger [GitHub Actions](.github/workflows/docs-pages.yml) when
 | Empty or missing tables | Migrations / schema: align DB with models (Alembic or equivalent in your deployment) |
 
 ---
-
-## Contributing
-
-- Use feature branches and open PRs against `main`.
-- Run tests and `mkdocs build` when changing code or docs.
-- **Never** commit `.env`, real tokens, or database passwords.
-
-Questions about contract alignment with the Experimentation Engine should be checked against the engine client and any project OpenAPI / DAL rules your team uses.
