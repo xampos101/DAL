@@ -9,8 +9,6 @@ Use the menu pages to navigate:
 - [Configuration](configuration.md)
 - [Docker Deployment](docker-deployment.md)
 - [Troubleshooting](troubleshooting.md)
-- [PostgreSQL schema](../DAL_POSTGRESQL_SCHEMA.md) (DDL reference and `database_schema.sql`)
-- [Data flow](../DAL_DATA_FLOW.md)
 
 ## Security note
 
